@@ -90,25 +90,22 @@ type Options struct {
 }
 
 // Converter represents a PDF to text converter
-type Converter struct {
-	binaryPath string
-	options    Options
-}
+type Converter struct{ binaryPath string }
 
 // New creates a new Converter instance
-func New(options Options) (*Converter, error) {
+func New() (*Converter, error) {
 	binaryPath, err := exec.LookPath("pdftotext")
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBinaryNotFound, err)
 	}
-	return &Converter{binaryPath: binaryPath, options: options}, nil
+	return &Converter{binaryPath: binaryPath}, nil
 }
 
 // Convert converts a PDF file to text and returns the result
-func (c *Converter) Convert(ctx context.Context, inputPath string) (string, error) {
+func (c *Converter) Convert(ctx context.Context, inputPath string, opts Options) (string, error) {
 	var stdout, stderr bytes.Buffer
 
-	args := c.buildArgs(inputPath, "-")
+	args := c.buildArgs(opts, inputPath, "-")
 	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -132,10 +129,10 @@ func (c *Converter) Convert(ctx context.Context, inputPath string) (string, erro
 }
 
 // ConvertToFile converts a PDF file to text and saves it to the specified output file
-func (c *Converter) ConvertToFile(ctx context.Context, inputPath, outputPath string) error {
+func (c *Converter) ConvertToFile(ctx context.Context, inputPath, outputPath string, opts Options) error {
 	var stderr bytes.Buffer
 
-	args := c.buildArgs(inputPath, outputPath)
+	args := c.buildArgs(opts, inputPath, outputPath)
 	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	cmd.Stderr = &stderr
 
@@ -157,75 +154,75 @@ func (c *Converter) ConvertToFile(ctx context.Context, inputPath, outputPath str
 	return nil
 }
 
-func (c *Converter) buildArgs(inputPath, outputPath string) []string {
+func (c *Converter) buildArgs(options Options, inputPath, outputPath string) []string {
 	args := make([]string, 0)
-	if c.options.FirstPage > 0 {
-		args = append(args, "-f", strconv.Itoa(c.options.FirstPage))
+	if options.FirstPage > 0 {
+		args = append(args, "-f", strconv.Itoa(options.FirstPage))
 	}
-	if c.options.LastPage > 0 {
-		args = append(args, "-l", strconv.Itoa(c.options.LastPage))
+	if options.LastPage > 0 {
+		args = append(args, "-l", strconv.Itoa(options.LastPage))
 	}
-	if c.options.Resolution > 0 {
-		args = append(args, "-r", strconv.Itoa(c.options.Resolution))
+	if options.Resolution > 0 {
+		args = append(args, "-r", strconv.Itoa(options.Resolution))
 	}
-	if c.options.CropX > 0 {
-		args = append(args, "-x", strconv.Itoa(c.options.CropX))
+	if options.CropX > 0 {
+		args = append(args, "-x", strconv.Itoa(options.CropX))
 	}
-	if c.options.CropY > 0 {
-		args = append(args, "-y", strconv.Itoa(c.options.CropY))
+	if options.CropY > 0 {
+		args = append(args, "-y", strconv.Itoa(options.CropY))
 	}
-	if c.options.CropWidth > 0 {
-		args = append(args, "-W", strconv.Itoa(c.options.CropWidth))
+	if options.CropWidth > 0 {
+		args = append(args, "-W", strconv.Itoa(options.CropWidth))
 	}
-	if c.options.CropHeight > 0 {
-		args = append(args, "-H", strconv.Itoa(c.options.CropHeight))
+	if options.CropHeight > 0 {
+		args = append(args, "-H", strconv.Itoa(options.CropHeight))
 	}
-	if c.options.Layout {
+	if options.Layout {
 		args = append(args, "-layout")
 	}
-	if c.options.FixedPitch > 0 {
-		args = append(args, "-fixed", strconv.FormatFloat(c.options.FixedPitch, 'f', -1, 64))
+	if options.FixedPitch > 0 {
+		args = append(args, "-fixed", strconv.FormatFloat(options.FixedPitch, 'f', -1, 64))
 	}
-	if c.options.Raw {
+	if options.Raw {
 		args = append(args, "-raw")
 	}
-	if c.options.NoDiagonal {
+	if options.NoDiagonal {
 		args = append(args, "-nodiag")
 	}
-	if c.options.HTMLMeta {
+	if options.HTMLMeta {
 		args = append(args, "-htmlmeta")
 	}
-	if c.options.BBox {
+	if options.BBox {
 		args = append(args, "-bbox")
 	}
-	if c.options.BBoxLayout {
+	if options.BBoxLayout {
 		args = append(args, "-bbox-layout")
 	}
-	if c.options.TSV {
+	if options.TSV {
 		args = append(args, "-tsv")
 	}
-	if c.options.CropBox {
+	if options.CropBox {
 		args = append(args, "-cropbox")
 	}
-	if c.options.ColSpacing > 0 {
-		args = append(args, "-colspacing", strconv.FormatFloat(c.options.ColSpacing, 'f', -1, 64))
+	if options.ColSpacing > 0 {
+		args = append(args, "-colspacing", strconv.FormatFloat(options.ColSpacing, 'f', -1, 64))
 	}
-	if c.options.Encoding != "" {
-		args = append(args, "-enc", c.options.Encoding)
+	if options.Encoding != "" {
+		args = append(args, "-enc", options.Encoding)
 	}
-	if c.options.EOL != "" {
-		args = append(args, "-eol", string(c.options.EOL))
+	if options.EOL != "" {
+		args = append(args, "-eol", string(options.EOL))
 	}
-	if c.options.NoPageBreaks {
+	if options.NoPageBreaks {
 		args = append(args, "-nopgbrk")
 	}
-	if c.options.OwnerPassword != "" {
-		args = append(args, "-opw", c.options.OwnerPassword)
+	if options.OwnerPassword != "" {
+		args = append(args, "-opw", options.OwnerPassword)
 	}
-	if c.options.UserPassword != "" {
-		args = append(args, "-upw", c.options.UserPassword)
+	if options.UserPassword != "" {
+		args = append(args, "-upw", options.UserPassword)
 	}
-	if c.options.Quiet {
+	if options.Quiet {
 		args = append(args, "-q")
 	}
 	args = append(args, inputPath)

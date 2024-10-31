@@ -12,50 +12,6 @@ import (
 const expectedContent = `This is a test PDF document.
 If you can read this, you have Adobe Acrobat Reader installed on your computer.`
 
-func TestNewConverter(t *testing.T) {
-	tests := []struct {
-		name        string
-		options     Options
-		expectError bool
-	}{
-		{
-			name:        "Default options",
-			options:     Options{},
-			expectError: false,
-		},
-		{
-			name: "Valid options",
-			options: Options{
-				FirstPage:  1,
-				LastPage:   10,
-				Resolution: 300,
-				Layout:     true,
-				Encoding:   "UTF-8",
-			},
-			expectError: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			converter, err := New(tt.options)
-			if tt.expectError {
-				if err == nil {
-					t.Error("expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
-				return
-			}
-			if converter == nil {
-				t.Error("expected converter, got nil")
-			}
-		})
-	}
-}
-
 func TestConverter_Convert(t *testing.T) {
 	testPDFPath := filepath.Join("testdata", "test.pdf")
 
@@ -99,13 +55,13 @@ func TestConverter_Convert(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			converter, err := New(tt.options)
+			converter, err := New()
 			if err != nil {
 				t.Fatalf("failed to create converter: %v", err)
 			}
 
 			ctx := context.Background()
-			text, err := converter.Convert(ctx, tt.inputPath)
+			text, err := converter.Convert(ctx, tt.inputPath, tt.options)
 
 			if tt.expectedError != nil {
 				if !errors.Is(err, tt.expectedError) {
@@ -164,13 +120,13 @@ func TestConverter_ConvertToFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			converter, err := New(tt.options)
+			converter, err := New()
 			if err != nil {
 				t.Fatalf("failed to create converter: %v", err)
 			}
 
 			ctx := context.Background()
-			err = converter.ConvertToFile(ctx, tt.inputPath, tt.outputPath)
+			err = converter.ConvertToFile(ctx, tt.inputPath, tt.outputPath, tt.options)
 
 			if tt.expectedError != nil {
 				if !errors.Is(err, tt.expectedError) {
@@ -276,12 +232,12 @@ func TestConverter_BuildArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			converter, err := New(tt.options)
+			converter, err := New()
 			if err != nil {
 				t.Fatalf("failed to create converter: %v", err)
 			}
 
-			args := converter.buildArgs(tt.inputPath, tt.outputPath)
+			args := converter.buildArgs(tt.options, tt.inputPath, tt.outputPath)
 
 			if len(args) != len(tt.expectedArgs) {
 				t.Errorf("expected %d args, got %d", len(tt.expectedArgs), len(args))

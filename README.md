@@ -38,22 +38,20 @@ import (
 )
 
 func main() {
-    options := pdftotextgo.Options{
+   	ctx := context.Background()
+
+    converter, err := pdftotextgo.New()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    text, err := converter.Convert(ctx, "input.pdf", pdftotextgo.Options{
         Layout:   true,
         Encoding: "UTF-8",
-    }
-
-    converter, err := pdftotextgo.New(options)
+    })
     if err != nil {
         log.Fatal(err)
     }
-
-    ctx := context.Background()
-    text, err := converter.Convert(ctx, "input.pdf")
-    if err != nil {
-        log.Fatal(err)
-    }
-
     fmt.Println(text)
 }
 ```
@@ -61,7 +59,10 @@ func main() {
 ## Converting to File
 
 ```go
-err = converter.ConvertToFile(ctx, "input.pdf", "output.txt")
+err = converter.ConvertToFile(ctx, "input.pdf", "output.txt", pdftotextgo.Options{
+	Layout:   true,
+	Encoding: "UTF-8",
+})
 if err != nil {
     log.Fatal(err)
 }
