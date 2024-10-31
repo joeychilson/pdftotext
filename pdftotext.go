@@ -102,7 +102,7 @@ func New() (*Converter, error) {
 }
 
 // Convert converts a PDF file to text and returns the result
-func (c *Converter) Convert(ctx context.Context, inputPath string, opts Options) (string, error) {
+func (c *Converter) Convert(ctx context.Context, inputPath string, opts *Options) (string, error) {
 	var stdout, stderr bytes.Buffer
 
 	args := c.buildArgs(opts, inputPath, "-")
@@ -111,25 +111,13 @@ func (c *Converter) Convert(ctx context.Context, inputPath string, opts Options)
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			switch exitErr.ExitCode() {
-			case 1:
-				return "", fmt.Errorf("%w: %s", ErrPDFOpen, stderr.String())
-			case 2:
-				return "", fmt.Errorf("%w: %s", ErrOutputFile, stderr.String())
-			case 3:
-				return "", fmt.Errorf("%w: %s", ErrPermissions, stderr.String())
-			default:
-				return "", fmt.Errorf("%w: %s", ErrCommandFailed, stderr.String())
-			}
-		}
-		return "", fmt.Errorf("failed to run pdftotext: %w", err)
+		return "", c.handleError(err, stderr.String())
 	}
 	return strings.TrimSpace(stdout.String()), nil
 }
 
 // ConvertToFile converts a PDF file to text and saves it to the specified output file
-func (c *Converter) ConvertToFile(ctx context.Context, inputPath, outputPath string, opts Options) error {
+func (c *Converter) ConvertToFile(ctx context.Context, inputPath, outputPath string, opts *Options) error {
 	var stderr bytes.Buffer
 
 	args := c.buildArgs(opts, inputPath, outputPath)
@@ -137,94 +125,79 @@ func (c *Converter) ConvertToFile(ctx context.Context, inputPath, outputPath str
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			switch exitErr.ExitCode() {
-			case 1:
-				return fmt.Errorf("%w: %s", ErrPDFOpen, stderr.String())
-			case 2:
-				return fmt.Errorf("%w: %s", ErrOutputFile, stderr.String())
-			case 3:
-				return fmt.Errorf("%w: %s", ErrPermissions, stderr.String())
-			default:
-				return fmt.Errorf("%w: %s", ErrCommandFailed, stderr.String())
-			}
-		}
-		return fmt.Errorf("failed to run pdftotext: %w", err)
+		return c.handleError(err, stderr.String())
 	}
 	return nil
 }
 
-func (c *Converter) buildArgs(options Options, inputPath, outputPath string) []string {
-	args := make([]string, 0)
-	if options.FirstPage > 0 {
-		args = append(args, "-f", strconv.Itoa(options.FirstPage))
+func (c *Converter) handleError(err error, stderr string) error {
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		switch exitErr.ExitCode() {
+		case 1:
+			return fmt.Errorf("%w: %s", ErrPDFOpen, stderr)
+		case 2:
+			return fmt.Errorf("%w: %s", ErrOutputFile, stderr)
+		case 3:
+			return fmt.Errorf("%w: %s", ErrPermissions, stderr)
+		default:
+			return fmt.Errorf("%w: %s", ErrCommandFailed, stderr)
+		}
 	}
-	if options.LastPage > 0 {
-		args = append(args, "-l", strconv.Itoa(options.LastPage))
+	return fmt.Errorf("failed to run pdftotext: %w", err)
+}
+
+func (c *Converter) buildArgs(opts *Options, inputPath, outputPath string) []string {
+	if opts == nil {
+		opts = &Options{}
 	}
-	if options.Resolution > 0 {
-		args = append(args, "-r", strconv.Itoa(options.Resolution))
+
+	var args []string
+
+	appendFlag := func(flag string, value any) {
+		switch v := value.(type) {
+		case int:
+			if v > 0 {
+				args = append(args, flag, strconv.Itoa(v))
+			}
+		case float64:
+			if v > 0 {
+				args = append(args, flag, strconv.FormatFloat(v, 'f', -1, 64))
+			}
+		case string:
+			if v != "" {
+				args = append(args, flag, v)
+			}
+		case bool:
+			if v {
+				args = append(args, flag)
+			}
+		}
 	}
-	if options.CropX > 0 {
-		args = append(args, "-x", strconv.Itoa(options.CropX))
-	}
-	if options.CropY > 0 {
-		args = append(args, "-y", strconv.Itoa(options.CropY))
-	}
-	if options.CropWidth > 0 {
-		args = append(args, "-W", strconv.Itoa(options.CropWidth))
-	}
-	if options.CropHeight > 0 {
-		args = append(args, "-H", strconv.Itoa(options.CropHeight))
-	}
-	if options.Layout {
-		args = append(args, "-layout")
-	}
-	if options.FixedPitch > 0 {
-		args = append(args, "-fixed", strconv.FormatFloat(options.FixedPitch, 'f', -1, 64))
-	}
-	if options.Raw {
-		args = append(args, "-raw")
-	}
-	if options.NoDiagonal {
-		args = append(args, "-nodiag")
-	}
-	if options.HTMLMeta {
-		args = append(args, "-htmlmeta")
-	}
-	if options.BBox {
-		args = append(args, "-bbox")
-	}
-	if options.BBoxLayout {
-		args = append(args, "-bbox-layout")
-	}
-	if options.TSV {
-		args = append(args, "-tsv")
-	}
-	if options.CropBox {
-		args = append(args, "-cropbox")
-	}
-	if options.ColSpacing > 0 {
-		args = append(args, "-colspacing", strconv.FormatFloat(options.ColSpacing, 'f', -1, 64))
-	}
-	if options.Encoding != "" {
-		args = append(args, "-enc", options.Encoding)
-	}
-	if options.EOL != "" {
-		args = append(args, "-eol", string(options.EOL))
-	}
-	if options.NoPageBreaks {
-		args = append(args, "-nopgbrk")
-	}
-	if options.OwnerPassword != "" {
-		args = append(args, "-opw", options.OwnerPassword)
-	}
-	if options.UserPassword != "" {
-		args = append(args, "-upw", options.UserPassword)
-	}
-	if options.Quiet {
-		args = append(args, "-q")
-	}
+
+	appendFlag("-f", opts.FirstPage)
+	appendFlag("-l", opts.LastPage)
+	appendFlag("-r", opts.Resolution)
+	appendFlag("-x", opts.CropX)
+	appendFlag("-y", opts.CropY)
+	appendFlag("-W", opts.CropWidth)
+	appendFlag("-H", opts.CropHeight)
+	appendFlag("-layout", opts.Layout)
+	appendFlag("-fixed", opts.FixedPitch)
+	appendFlag("-raw", opts.Raw)
+	appendFlag("-nodiag", opts.NoDiagonal)
+	appendFlag("-htmlmeta", opts.HTMLMeta)
+	appendFlag("-bbox", opts.BBox)
+	appendFlag("-bbox-layout", opts.BBoxLayout)
+	appendFlag("-tsv", opts.TSV)
+	appendFlag("-cropbox", opts.CropBox)
+	appendFlag("-colspacing", opts.ColSpacing)
+	appendFlag("-enc", opts.Encoding)
+	appendFlag("-eol", string(opts.EOL))
+	appendFlag("-nopgbrk", opts.NoPageBreaks)
+	appendFlag("-opw", opts.OwnerPassword)
+	appendFlag("-upw", opts.UserPassword)
+	appendFlag("-q", opts.Quiet)
+
 	args = append(args, inputPath)
 	if outputPath != "" {
 		args = append(args, outputPath)

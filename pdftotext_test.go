@@ -17,7 +17,7 @@ func TestConverter_Convert(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		options       Options
+		options       *Options
 		inputPath     string
 		expectedError error
 		expectedText  string
@@ -25,13 +25,13 @@ func TestConverter_Convert(t *testing.T) {
 	}{
 		{
 			name:          "Non-existent file",
-			options:       Options{},
+			options:       nil,
 			inputPath:     "nonexistent.pdf",
 			expectedError: ErrPDFOpen,
 		},
 		{
 			name: "Basic conversion",
-			options: Options{
+			options: &Options{
 				Layout:   true,
 				Encoding: "UTF-8",
 			},
@@ -41,7 +41,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			name: "With specific pages",
-			options: Options{
+			options: &Options{
 				FirstPage: 1,
 				LastPage:  1,
 				Layout:    true,
@@ -93,7 +93,7 @@ func TestConverter_ConvertToFile(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		options       Options
+		options       *Options
 		inputPath     string
 		outputPath    string
 		expectedError error
@@ -101,14 +101,14 @@ func TestConverter_ConvertToFile(t *testing.T) {
 	}{
 		{
 			name:          "Non-existent input file",
-			options:       Options{},
+			options:       nil,
 			inputPath:     "nonexistent.pdf",
 			outputPath:    filepath.Join(tmpDir, "output1.txt"),
 			expectedError: ErrPDFOpen,
 		},
 		{
 			name: "Valid conversion",
-			options: Options{
+			options: &Options{
 				Layout:   true,
 				Encoding: "UTF-8",
 			},
@@ -160,14 +160,14 @@ func TestConverter_ConvertToFile(t *testing.T) {
 func TestConverter_BuildArgs(t *testing.T) {
 	tests := []struct {
 		name         string
-		options      Options
+		options      *Options
 		inputPath    string
 		outputPath   string
 		expectedArgs []string
 	}{
 		{
 			name: "All options",
-			options: Options{
+			options: &Options{
 				FirstPage:     1,
 				LastPage:      10,
 				Resolution:    300,
@@ -223,7 +223,7 @@ func TestConverter_BuildArgs(t *testing.T) {
 		},
 		{
 			name:         "Minimal options",
-			options:      Options{},
+			options:      nil,
 			inputPath:    "input.pdf",
 			outputPath:   "output.txt",
 			expectedArgs: []string{"input.pdf", "output.txt"},
