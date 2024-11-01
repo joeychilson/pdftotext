@@ -1,4 +1,4 @@
-# pdftotextgo
+# pdftotext
 
 A Go library for converting PDF files to text using the `pdftotext` utility.
 
@@ -21,7 +21,7 @@ brew install poppler
 ## Installation
 
 ```bash
-go get github.com/joeychilson/pdftotextgo
+go get github.com/joeychilson/pdftotext
 ```
 
 ## Quick Start
@@ -34,18 +34,18 @@ import (
     "fmt"
     "log"
 
-    "github.com/joeychilson/pdftotextgo"
+    "github.com/joeychilson/pdftotext"
 )
 
 func main() {
    	ctx := context.Background()
 
-    converter, err := pdftotextgo.New()
+    converter, err := pdftotext.New()
     if err != nil {
         log.Fatal(err)
     }
 
-    text, err := converter.Convert(ctx, "input.pdf", pdftotextgo.Options{
+    text, err := converter.Convert(ctx, "input.pdf", &pdftotext.Options{
         Layout:   true,
         Encoding: "UTF-8",
     })
@@ -59,7 +59,7 @@ func main() {
 ## Converting to File
 
 ```go
-err = converter.ConvertToFile(ctx, "input.pdf", "output.txt", pdftotextgo.Options{
+err = converter.ConvertToFile(ctx, "input.pdf", "output.txt", &pdftotext.Options{
 	Layout:   true,
 	Encoding: "UTF-8",
 })

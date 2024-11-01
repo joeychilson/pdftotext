@@ -1,4 +1,4 @@
-package pdftotextgo
+package pdftotext
 
 import (
 	"bytes"
